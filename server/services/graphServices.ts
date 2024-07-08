@@ -45,7 +45,7 @@ class graphService {
       predecessor[vertex] = '';
     }
     distance[start] = 0;
-    const n = 52;
+    const n = 220;
 
     for (let i = 1; i <= n - 1; i++){
       for (let startcurrency in graph){
