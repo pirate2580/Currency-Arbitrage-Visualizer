@@ -1,0 +1,10 @@
+# Ignore environment files
+/server/.env
+/client/node_modules
+/server/node_modules
+# Ignore node_modules directory
+node_modules/
+
+# Ignore lock files
+/client/package-lock.json
+/server/package-lock.json
