@@ -1,10 +1,10 @@
-Sure! Here is a README for your Currency Arbitrage Visualizer project:
+Here is the updated README with the section on how the Bellman-Ford algorithm is used:
 
 ---
 
 # Currency Arbitrage Visualizer
 
-Currency Arbitrage Visualizer is a web application designed to identify and display arbitrage opportunities between different currencies. This application fetches currency rates from the Currency Beacon forex API, computes potential arbitrage cycles, and visualizes them for users.
+Currency Arbitrage Visualizer is a web application designed to identify and display arbitrage opportunities between different currencies. This application fetches real-time currency rates, computes potential arbitrage cycles, and visualizes them for users.
 
 ## Table of Contents
 
@@ -13,6 +13,7 @@ Currency Arbitrage Visualizer is a web application designed to identify and disp
 - [Installation](#installation)
 - [Usage](#usage)
 - [API Endpoints](#api-endpoints)
+- [Arbitrage Detection with Bellman-Ford Algorithm](#arbitrage-detection-with-bellman-ford-algorithm)
 - [Contributing](#contributing)
 - [License](#license)
 
@@ -96,6 +97,113 @@ Fetches all currency rates and detects potential arbitrage opportunities.
 
 Deletes all stored arbitrage opportunities.
 
+## Arbitrage Detection with Bellman-Ford Algorithm
+
+The Currency Arbitrage Visualizer uses the Bellman-Ford algorithm to detect price inefficiencies and potential arbitrage cycles. Here’s how it works:
+
+### Bellman-Ford Algorithm
+
+The Bellman-Ford algorithm is used to find the shortest paths from a single source vertex to all other vertices in a weighted graph. In the context of currency arbitrage, it helps identify negative weight cycles, which correspond to arbitrage opportunities.
+
+### Implementation
+
+Here's an overview of the implementation:
+
+1. **Graph Representation**: The currency exchange rates are represented as a graph where each vertex is a currency, and each edge is an exchange rate between two currencies.
+
+2. **Initialize Distances and Predecessors**: For each start currency, initialize the distance to all other currencies as infinity and the predecessor of each currency as empty.
+
+3. **Relax Edges**: For each vertex, relax all edges |V|-1 times, where |V| is the number of vertices. If a shorter path is found, update the distance and predecessor.
+
+4. **Detect Negative Cycles**: Check for negative weight cycles by iterating through each edge. If a shorter path is found, a negative cycle exists, indicating an arbitrage opportunity.
+
+5. **Extract Cycle and Profit**: If a negative cycle is detected, extract the cycle and calculate the profit by multiplying the exchange rates along the cycle.
+
+```javascript
+static async bellmanFord() {
+  const rawGraph = await this.getGraph();
+  const graph = await this.mapToObject(rawGraph);
+  const opportunitiesid = new Set();
+  const opportunities = new Set();
+
+  for (let start in graph) {
+    const distance = {};
+    const predecessor = {};
+
+    for (let vertex in graph) {
+      distance[vertex] = Infinity;
+      predecessor[vertex] = '';
+    }
+    distance[start] = 0;
+    const n = 52;
+
+    for (let i = 1; i <= n - 1; i++) {
+      for (let startcurrency in graph) {
+        for (let exchangecurrency in graph[startcurrency]) {
+          const exchangerate = graph[startcurrency][exchangecurrency];
+          if (distance[exchangecurrency] > distance[startcurrency] - Math.log2(exchangerate)) {
+            distance[exchangecurrency] = distance[startcurrency] - Math.log2(exchangerate);
+            predecessor[exchangecurrency] = startcurrency;
+          }
+        }
+      }
+    }
+
+    const { profit, cycle, id, profitRates } = await this.negativeCycles(n, graph, distance, predecessor);
+    if (!opportunitiesid.has(id) && profit > 1) {
+      opportunities.add({ profit, cycle, profitRates });
+      opportunitiesid.add(id);
+    }
+  }
+  return opportunities;
+}
+
+static async negativeCycles(n, graph, distance, predecessor) {
+  let negCycle = '';
+
+  for (let startcurrency in graph) {
+    for (let exchangecurrency in graph[startcurrency]) {
+      const exchangerate = graph[startcurrency][exchangecurrency];
+      if (distance[exchangecurrency] > distance[startcurrency] - Math.log2(exchangerate)) {
+        negCycle = startcurrency;
+        break;
+      }
+    }
+    if (negCycle) {
+      break;
+    }
+  }
+
+  if (negCycle) {
+    let cycle = [];
+    let curr_vertex = negCycle;
+
+    for (let i = 0; i < n; i++) {
+      curr_vertex = predecessor[curr_vertex];
+    }
+
+    let cycle_start = curr_vertex;
+    cycle.push(cycle_start);
+    let prev_vertex = cycle_start;
+    curr_vertex = predecessor[cycle_start];
+    let profit = 1;
+    let profitRates = [];
+    profit *= graph[prev_vertex][curr_vertex];
+    profitRates.push(graph[prev_vertex][curr_vertex]);
+    while (curr_vertex !== cycle_start) {
+      cycle.push(curr_vertex);
+      prev_vertex = curr_vertex;
+      curr_vertex = predecessor[curr_vertex];
+      profit *= graph[prev_vertex][curr_vertex];
+      profitRates.push(graph[prev_vertex][curr_vertex]);
+    }
+    cycle.push(curr_vertex);
+    return { profit, cycle, id: cycle.join(' '), profitRates };
+  }
+  return { profit: 0, cycle: [], id: '', profitRates: [] };
+}
+```
+
 ## Contributing
 
 Contributions are welcome! Please follow these steps to contribute:
@@ -112,5 +220,3 @@ Contributions are welcome! Please follow these steps to contribute:
 This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
 
 ---
-
-Feel free to modify the content as per your project's specifics and add any additional sections you find necessary.
